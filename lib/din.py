@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -9,10 +9,11 @@
 #   https://github.com/upyhome/upyhome
 #
 
-from machine import Pin, Timer
+from machine import Pin, Timer, disable_irq
 from lib.pub import Publisher
 """
 TODO Solve value / inverted / pullup combination
+TODO Verify if input mode is supported
 It prints tree events
     - When it's pressed -> P
     - When it's clicked -> C
@@ -20,7 +21,7 @@ It prints tree events
 """
 class DigitalInputPin(Publisher):
 
-    def __init__(self, topic, proxy, h_pin, tid, inverted=True, debounce=100, long=1000, user_cb=None, raw_value=False):
+    def __init__(self, tid, proxy, topic=None, pin=0, inverted=True, debounce=100, long=1000, user_cb=None, raw_value=False):
         super().__init__(topic, proxy, user_cb)
         self.inv = inverted
         self.dbc_t = debounce
@@ -31,16 +32,25 @@ class DigitalInputPin(Publisher):
         self._raw_value = False
         self._last_event = None
         self.dbc_tim = Timer(tid)
-        self.pin = Pin(h_pin, Pin.IN, Pin.PULL_UP if self.inv else Pin.PULL_DOWN)
-        self.pin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.irq_cb)
+        self._hpin = Pin(pin, Pin.IN, Pin.PULL_UP)
+        self.irq = None
+        #self._hpin = Pin(pin, Pin.IN, Pin.PULL_UP if self.inv else Pin.PULL_DOWN)
+        #self._hpin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.irq_cb)
+
+    def start(self):
+        self._hpin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.irq_cb)
+
+    def stop(self):
+        self.dbc_tim.deinit()
+        disable_irq()
 
     def value(self):
         if not self._raw_value:
             return self._last_event
         elif self.inv:
-            return 'on' if self.pin.value()==0 else 'off'
+            return 'on' if self._hpin.value()==0 else 'off'
         else:
-            return 'on' if self.pin.value()==1 else 'off'
+            return 'on' if self._hpin.value()==1 else 'off'
         return 
 
     def irq_cb(self, pin):
@@ -55,7 +65,7 @@ class DigitalInputPin(Publisher):
 
     def dbc_cb(self, tim):
         self.debouncing = False
-        if self.pin.value() == self.target:
+        if self._hpin.value() == self.target:
             self._last_event = 'C' if (self.inv and self.target == 1) or (not self.inv and self.target == 0) else 'P'
             if(self._last_event == 'P'):
                 self.dbc_tim.init(period=self.long_t, mode=Timer.ONE_SHOT, callback=self.long_cb)
@@ -64,7 +74,7 @@ class DigitalInputPin(Publisher):
             self._push(self._last_event)
         
     def long_cb(self, tim):
-        if self.pin.value() == self.target:
+        if self._hpin.value() == self.target:
             self.suppress = True
             self._last_event = 'L'
             self._push(self._last_event)

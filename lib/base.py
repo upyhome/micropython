@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -11,12 +11,12 @@
 
 class Base:
 
-    def __init__(self, topic, user_cb):
+    def __init__(self, topic, user_cb, mute=False):
         self._topic = topic
         self._state = {}
         self._proxy = None
         self._val = None
-        self._mute = True
+        self._mute = mute
         self._custom_cb = user_cb
         self._user_cb = self._user_eval if user_cb else None
         self._context = {'event': None, 
@@ -30,8 +30,6 @@ class Base:
 
     def _user_eval(self, data):
         exec(self._custom_cb, data)
-        if data['emit']:
-            print(self._message())
         return data['next']
 
     def mute(self, m=None):
@@ -45,3 +43,9 @@ class Base:
 
     def _message(self):
         return '#{}=[{}]'.format(self._topic,self.value())
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass

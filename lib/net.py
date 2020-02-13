@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -8,18 +8,22 @@
 # Project home:
 #   https://github.com/upyhome/upyhome
 #
+import gc
 from machine import Timer
 import network
 from lib.pub import Publisher
+from upyhome import platform
 
 class Net(Publisher):
-    def __init__(self, tid, nets, proxy=None, user_cb=None, polling=3000):
+    def __init__(self, tid, proxy, nets, repl='repl', user_cb=None, polling=3000):
         super().__init__('net', proxy, user_cb)
         self.net = None
         self.nets = nets
         self.polling = polling
         self.timer = Timer(tid)
         self.wlan = network.WLAN(network.STA_IF)
+        self._mdns = None
+        self._repl = repl 
     
     def value(self):
         return self.wlan.status() 
@@ -32,6 +36,10 @@ class Net(Publisher):
                 self._push('D')
                 self.connect()
         else:
+            if self._mdns is None:
+                self.init_mdns()
+            else:
+                self._mdns.advertise_hostname("upyhome.local")
             self._push('C')
             self.timer.deinit()
             self.timer.init(period=self.polling, mode=Timer.ONE_SHOT, callback=self.timer_cb)
@@ -59,9 +67,9 @@ class Net(Publisher):
                             self.net = net
             if self.net:
                 #print('connect to %s'%(sel['ssid']))
-                self.name = self.net['name']
+                self._topic = self.net['name']
                 self.wlan.config(dhcp_hostname=self.net['name'])
-                if not self.net['use_dhcp']:
+                if not self.net['dhcp']:
                     self.wlan.ifconfig((self.net['ip'], self.net['mask'], self.net['gateway'], self.net['dns']))
                 self.wlan.connect(self.net["ssid"], self.net["pwd"])
                 self.timer.init(period=1000, mode=Timer.PERIODIC, callback=self.timer_cb)
@@ -70,7 +78,9 @@ class Net(Publisher):
             for net in self.nets:
                 if cur_ssid == net['ssid']:
                     self.net = net
-                    self._name = net['name']
+                    self._topic = self.net['name']
             self.timer.init(period=self.polling, mode=Timer.ONE_SHOT, callback=self.timer_cb)
 
-
+    def init_mdns(self):
+        pass
+            

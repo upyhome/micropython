@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -11,29 +11,33 @@
 
 from machine import Pin
 from lib.sub import Subscriber
+from lib.pub import Publisher 
 
-class DigitalOutputPin(Subscriber):
+class DigitalOutputPin(Subscriber, Publisher):
 
-    def __init__(self, topic, h_pin, proxy=None, topics=[], inverted=False, user_cb=None):
-        super().__init__(topic, proxy, topics, user_cb)
-        self.pin = Pin(h_pin, Pin.OUT)
+    def __init__(self, proxy, topic=None, pin=0, topics=[], inverted=False, user_cb=None):
+        Subscriber.__init__(self, topic, proxy, topics, user_cb)
+        Publisher.__init__(self, topic, proxy)
+        self._hpin = Pin(pin, Pin.OUT)
         self.inverted = inverted
 
     def on(self, topic=None):
         if self.value() == 'on':
             return
         if self.inverted:
-            self.pin.off()
+            self._hpin.off()
         else:
-            self.pin.on()
+            self._hpin.on()
+        self._push(self.value())
 
     def off(self, topic=None):
         if self.value() == 'off':
             return
         if self.inverted:
-            self.pin.on()
+            self._hpin.on()
         else:
-            self.pin.off()
+            self._hpin.off()
+        self._push(self.value())
         
 
     def toggle(self, topic=None):
@@ -47,9 +51,9 @@ class DigitalOutputPin(Subscriber):
 
     def value(self):
         if self.inverted:
-            return 'on' if self.pin.value() == 0 else 'off'
+            return 'on' if self._hpin.value() == 0 else 'off'
         else:
-            return 'on' if self.pin.value() == 1 else 'off'
+            return 'on' if self._hpin.value() == 1 else 'off'
 
     
 

@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:

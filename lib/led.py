@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -14,7 +14,7 @@ from neopixel import NeoPixel
 from lib.sub import Subscriber
 
 class Led(Subscriber):
-    def __init__(self, topic, h_pin, num, tid, proxy=None, user_cb=None):
+    def __init__(self, tid, proxy, topic='led', h_pin=0, num=1, user_cb=None):
         super().__init__(topic, proxy, user_cb)
         self.num = num
         self.pix = NeoPixel(Pin(h_pin, Pin.OUT), num)

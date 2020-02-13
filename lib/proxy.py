@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -33,8 +33,16 @@ class Proxy(Base):
         topic = event['topic']
         if topic in self._subscriber:
             for sub in self._subscriber[topic]:
-                if not sub._pull(event):
+                next = sub._pull(event)
+                if event['emit']:
+                    print(sub._message())
+                if not next:
                     break
+        else:
+            if topic in self._publisher:
+                pub = self._publisher[topic]
+                if not pub.mute():
+                    print(pub._message())
 
     def get_state(self, event):
         if event in self._state:

@@ -1,5 +1,5 @@
 #
-# This file is part of µpyhone
+# This file is part of upyHome
 # Copyright (c) 2020 ng-galien
 #
 # Licensed under the MIT license:
@@ -21,12 +21,11 @@ class Publisher(Base):
         
     def _push(self, event):
         _push = True
+        self._context['event'] = event
         if self._user_cb is not None:
             self._context['next'] = True
-            self._context['event'] = event
             _next = self._user_cb(self._context)
             _push = _next
-        #print('push?', _push)
         if _push:
             self._on_event(self._context)
 
