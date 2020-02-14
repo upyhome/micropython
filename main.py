@@ -6,5 +6,5 @@ from upyhome import UpyHome
 
 uph = UpyHome()
 uph.configure()
-uph.exec('start')
+#uph.exec('mute', 'net', True)
 

@@ -10,14 +10,14 @@
 #
 
 from machine import Pin
-from lib.sub import Subscriber
-from lib.pub import Publisher 
+from base import Subscriber
 
-class DigitalOutputPin(Subscriber, Publisher):
-
-    def __init__(self, proxy, topic=None, pin=0, topics=[], inverted=False, user_cb=None):
-        Subscriber.__init__(self, topic, proxy, topics, user_cb)
-        Publisher.__init__(self, topic, proxy)
+class DigitalOutputPin(Subscriber):
+    """
+    Digital output component
+    """
+    def __init__(self, proxy, topic=None, pin=0, suscribe=None, inverted=False, user=None):
+        super().__init__(topic, proxy, suscribe=suscribe, user=user)
         self._hpin = Pin(pin, Pin.OUT)
         self.inverted = inverted
 
@@ -55,6 +55,3 @@ class DigitalOutputPin(Subscriber, Publisher):
         else:
             return 'on' if self._hpin.value() == 1 else 'off'
 
-    
-
-    

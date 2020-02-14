@@ -10,19 +10,20 @@
 #
 
 from machine import Pin, Timer, disable_irq
-from lib.pub import Publisher
+from base import Publisher
 """
 TODO Solve value / inverted / pullup combination
 TODO Verify if input mode is supported
-It prints tree events
+"""
+class DigitalInputPin(Publisher):
+    """
+    Digital input component
     - When it's pressed -> P
     - When it's clicked -> C
     - When it's long pressed -> L
-"""
-class DigitalInputPin(Publisher):
-
-    def __init__(self, tid, proxy, topic=None, pin=0, inverted=True, debounce=100, long=1000, user_cb=None, raw_value=False):
-        super().__init__(topic, proxy, user_cb)
+    """
+    def __init__(self, tid, proxy, topic=None, pin=0, inverted=True, debounce=100, long=1000, user=None, raw_value=False):
+        super().__init__(topic, proxy, user)
         self.inv = inverted
         self.dbc_t = debounce
         self.long_t = long
@@ -35,14 +36,7 @@ class DigitalInputPin(Publisher):
         self._hpin = Pin(pin, Pin.IN, Pin.PULL_UP)
         self.irq = None
         #self._hpin = Pin(pin, Pin.IN, Pin.PULL_UP if self.inv else Pin.PULL_DOWN)
-        #self._hpin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.irq_cb)
-
-    def start(self):
         self._hpin.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.irq_cb)
-
-    def stop(self):
-        self.dbc_tim.deinit()
-        disable_irq()
 
     def value(self):
         if not self._raw_value:
