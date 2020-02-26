@@ -1,10 +1,16 @@
+
+"""
+This file is part of upyHome
+Copyright (c) 2020 ng-galien
+Licensed under the MIT license:
+http://www.opensource.org/licenses/mit-license.php
+Project home:
+https://github.com/upyhome/upyhome
+"""
 import gc
-gc.enable()
-#gc.threshold(gc.mem_free() // 4 + gc.mem_alloc())
-
 from upyhome import UpyHome
-
+gc.enable()
 uph = UpyHome()
 uph.configure()
-#uph.exec('mute', 'net', True)
+
 

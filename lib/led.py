@@ -1,23 +1,24 @@
-#
-# This file is part of upyHome
-# Copyright (c) 2020 ng-galien
-#
-# Licensed under the MIT license:
-#   http://www.opensource.org/licenses/mit-license.php
-#
-# Project home:
-#   https://github.com/upyhome/upyhome
-#
+"""
+This file is part of upyHome
+Copyright (c) 2020 ng-galien
+Licensed under the MIT license:
+http://www.opensource.org/licenses/mit-license.php
+Project home:
+https://github.com/upyhome/upyhome
+"""
 
 from machine import Pin, Timer
 from neopixel import NeoPixel
-from lib.sub import Subscriber
+from lib.base import Suscriber
 
-class Led(Subscriber):
-    def __init__(self, tid, proxy, topic='led', h_pin=0, num=1, user_cb=None):
-        super().__init__(topic, proxy, user_cb)
-        self.num = num
-        self.pix = NeoPixel(Pin(h_pin, Pin.OUT), num)
+class Led(Suscriber):
+    def __init__(self, tid, proxy, **kwargs):#='led', pin=0, num=1, user=None):
+        super().__init__(proxy, **kwargs)
+        pin = kwargs.get('pin', None)
+        if not isinstance(pin, int):
+            raise AttributeError('Input pin number (%s) not allowd for topic %s'%(str(pin), topic))
+        self.num = kwargs.get('num', 1)
+        self.pix = NeoPixel(Pin(pin, Pin.OUT), self.num)
         self.tim = Timer(tid)
         self.rgb = (0, 0, 0)
         self.alpha = 1

@@ -1,69 +1,34 @@
-#
-# This file is part of upyHome
-# Copyright (c) 2020 ng-galien
-#
-# Licensed under the MIT license:
-#   http://www.opensource.org/licenses/mit-license.php
-#
-# Project home:
-#   https://github.com/upyhome/upyhome
-#
-
-ERROR_FILE = 'error.log'
-CONFIG_FILE = 'config.json'
-CONFIG_NET = 'network'
-CONFIG_WIFI = 'wifi'
-CONFIG_DIN = 'digital-inputs'
-CONFIG_DOUT = 'digital-outputs'
-CONFIG_LED = 'leds'
-CONFIG_I2C = 'i2c'
-CONFIG_SPI = 'spi'
-CONFIG_DRIVER = 'drivers'
-
-KEY_DEBUG = 'debug'
-KEY_NET = 'net'
-KEY_PLATFORM = 'platform'
-KEY_TOPIC = 'topic'
-KEY_USER_CB = 'user'
-KEY_NETWORKS = 'networks'
-
-platform = ''
-mode_debug = False
-
-__VERSION__ = '0.1.0'
-
-
-
-def print_logo():
-    logo = """
-                 __ __               
- __ _____  __ __/ // /__  __ _  ___ 
-/ // / _ \/ // / _  / _ \/  ' \/ -_)
-\_,_/ .__/\_, /_//_/\___/_/_/_/\__/ 
-   /_/   /___/                      
 """
-    print(logo)
+This file is part of upyHome
+Copyright (c) 2020 ng-galien
+Licensed under the MIT license:
+http://www.opensource.org/licenses/mit-license.php
+Project home:
+https://github.com/upyhome/upyhome
+"""
 
-def _DEBUG(msg):
-    """
-    Debug a message with the correct output format
-    """
-    if mode_debug:
-        print('#debug=[%s]'%(msg))
-
-from base import Publisher, Proxy
+from lib.base import Proxy, Suscriber
+from machine import Timer, I2C, Pin
+import uos
+import ujson
+from lib.common import MODE_DEBUG, PLATFORM, _debug, MAX_PRIORITY, log_error
+from lib.common import CONFIG_FILE, CONFIG_NAME, CONFIG_HOSTNAME, CONFIG_NET, CONFIG_WIFI
+from lib.common import CONFIG_DIN, CONFIG_DOUT, CONFIG_LED, CONFIG_I2C, CONFIG_SPI, CONFIG_DRIVER
+from lib.common import KEY_PLATFORM, KEY_DEBUG, KEY_NET, KEY_TOPIC, KEY_USER_CB, KEY_NETWORKS, KEY_SUSCRIBES
 
 _PROXY = Proxy()
 
-class UpyHome(Publisher):
+class UpyHome(Suscriber):
     """
     Upyhome main class
     """
     def __init__(self):
-        from machine import Timer
-        super().__init__('upyhome', _PROXY)
+        args = {'topic': 'upyhome'}
+        super().__init__(_PROXY, **args)
+        self._name = 'upyhome'
         self._proxy = _PROXY
         self._config = None
+        self._priority = MAX_PRIORITY
         self._comps = {}
         self._tidx = 1
         self._tick = 0
@@ -71,14 +36,14 @@ class UpyHome(Publisher):
         self._live_tim.init(period=1000, mode=Timer.PERIODIC, callback=self._alive)
         self._tidx += 1
 
-    def _alive(self, timer): 
+    def _alive(self, timer):
         """
         Trick to avoid garbage collection from main execution
         """
-        self._tick += 1        
+        self._tick += 1
 
     def _exec_func(self, obj, function, args):
-        _DEBUG('_exec_func {0}@{1} [{2}]'.format(function, obj, args))
+        _debug('_exec_func {0}@{1} [{2}]'.format(function, obj, args))
         if hasattr(obj, function):
             func = getattr(obj, function)
             if callable(func):
@@ -90,10 +55,10 @@ class UpyHome(Publisher):
             raise Exception('Function %s not found on %s'%(function, obj))
 
     def exec(self, method, topic=None, data=None):
-        _DEBUG('exec %s %s %s'%(method, topic, data))
         """
         Execute a comp method, mainly used from the outside world aka REPL
         """
+        _debug('exec %s %s %s'%(method, topic, data))
         try:
             if method == 'broadcast':
                 self._context['topic'] = topic
@@ -108,12 +73,9 @@ class UpyHome(Publisher):
                 if comps is not None:
                     for comp in comps:
                         self._exec_func(comp, method, data)
-                return True
+            return True
         except Exception as ex:
-            if mode_debug:
-                import sys
-                sys.print_exception(ex)
-            self._log_error('{0}@upyhome::exec'.format(ex))
+            log_error('{0}@upyhome::exec'.format(ex))
             return False
 
     def ping(self):
@@ -129,25 +91,7 @@ class UpyHome(Publisher):
         try:
             raise Exception('Test exception')
         except Exception as ex:
-            self._log_error('{0}@upyhome::test_error'.format(ex))
-
-    def _log_error(self, err):
-        """
-        Log the last error, maximum size is 2kb
-        """
-        import sys
-        import uos
-        import machine
-        mode = 'a'
-        if ERROR_FILE in uos.ilistdir():
-            size = uos.stat(ERROR_FILE)[6]
-            if size > 2000:
-                mode = 'w'
-        with open('err.log', mode) as f:
-            dt = machine.RTC().datetime()
-            f.write('timestamp = %d/%02d/%02d - %02d:%02d:%02d\n'%(dt[0],dt[1],dt[2],dt[4],dt[5],dt[6]))
-            f.write('%s\n'%(err))
-
+            log_error('{0}@upyhome::test_error'.format(ex))
 
     def _get_config_key(self, config, key, suppress=False):
         """
@@ -162,10 +106,17 @@ class UpyHome(Publisher):
         """
         Configure a component
         """
-        _DEBUG('upyhome::_config_comp::{0}'.format(key))
+        _debug('upyhome::_config_comp::{0}'.format(key))
         if key in self._config:
             if self._config[key]:
-                conf_func(self._config[key])
+                comp_config = self._config[key]
+                #Check if component is disabled
+                if isinstance(comp_config, dict):
+                    if not 'disable' in comp_config: 
+                        conf_func(comp_config)
+                elif isinstance(comp_config, list):
+                    cmp_confs = [cc for cc in comp_config if not 'disable' in cc]
+                    conf_func(cmp_confs)
             if suppress:
                 del self._config[key]
 
@@ -175,16 +126,22 @@ class UpyHome(Publisher):
         """
         try:
             self._load_config()
-            global mode_debug
-            mode_debug= self._get_config_key(self._config, KEY_DEBUG, True)
-            _DEBUG('upyhome::configure')
-            global platform 
-            platform = self._get_config_key(self._config, KEY_PLATFORM, True)
+
+            
+            MODE_DEBUG['value'] = self._get_config_key(self._config, KEY_DEBUG, True)
+            _debug('upyhome::configure')
+            
+            PLATFORM['value'] = self._get_config_key(self._config, KEY_PLATFORM, True)
+            self._name = self._config[CONFIG_NAME]
             # Re init base cb
             self._init_cb(self._get_config_key(self._config, KEY_USER_CB, True))
-            
-            #components
-            CONFIG_COMPS= [
+            #Configure components
+            suscribes = self._get_config_key(self._config, KEY_SUSCRIBES)
+            if suscribes is not None and isinstance(suscribes, list):
+                for scb in suscribes:
+                    self._add_suscribe(self._proxy, scb)
+            #Components
+            CONFIG_COMPS = [
                 (CONFIG_NET, self._config_network),
                 (CONFIG_DIN, self._config_inputs),
                 (CONFIG_DOUT, self._config_outputs),
@@ -196,23 +153,20 @@ class UpyHome(Publisher):
             for CONF in CONFIG_COMPS:
                 self._config_comp(*CONF)
         except Exception as ex:
-            if mode_debug:
-                import sys
-                sys.print_exception(ex)
-            self._log_error('{0}@upyhome::configure'.format(ex))
+            log_error('{0}@upyhome::configure'.format(ex))
 
     def _load_config(self):
-        _DEBUG('upyhome::_load_config')
-        import uos
+        _debug('upyhome::_load_config')
         if not CONFIG_FILE in uos.listdir():
             raise Exception("config file not found")
-        import ujson
         cf = open(CONFIG_FILE, 'r')
         self._config = ujson.load(cf)
         cf.close()        
 
     def _config_network(self, conf):
         from lib.net import Net
+        if CONFIG_HOSTNAME not in conf:
+            conf[CONFIG_HOSTNAME] = self._name + '.local'
         conf = self._get_config_key(self._config, CONFIG_NET)
         nets = self._get_config_key(conf, CONFIG_WIFI, suppress=True)
         self._comps[KEY_NET] = Net(self._tidx, self._proxy, nets, **conf)
@@ -223,7 +177,7 @@ class UpyHome(Publisher):
         for conf in confs:
             topic = conf[KEY_TOPIC]
             self._comps[topic] = DigitalInputPin(self._tidx, self._proxy, **conf)
-            self._tidx  += 1
+            self._tidx += 1
     
     def _config_outputs(self, confs):
         from lib.dout import DigitalOutputPin
@@ -235,18 +189,16 @@ class UpyHome(Publisher):
         from lib.led import Led
         for conf in confs:
             topic = conf[KEY_TOPIC]
-            self._comps[topic] = Led(self._tidx, **conf)
+            self._comps[topic] = Led(self._tidx, self._proxy, **conf)
             self._tidx += 1
     
     def _config_i2cs(self, confs):
-        from machine import I2C
-        from machine import Pin
         for conf in confs:
             name = self._get_config_key(conf, "name", True)
             hard = self._get_config_key(conf, "hard", True)
             num = self._get_config_key(conf, "num", True)
             if hard:
-                self._comps[name] = I2C(num, **conf) 
+                self._comps[name] = I2C(num, **conf)
             else:
                 conf["sda"] = Pin(conf["sda"])
                 conf["scl"] = Pin(conf["scl"])
@@ -272,4 +224,5 @@ class UpyHome(Publisher):
                     self._comps[name] = class_(name, self._tidx, i2c=i2c_port, address=address, polling=polling, **conf)
                     self._tidx += 1
                 else:
-                        print("address {} not found in the i2c network {}".format(address, i2c_port))
+                    print("address {} not found in the i2c network {}".format(address, i2c_port))
+
