@@ -61,7 +61,7 @@ def print_logo():
  __ _____  __ __/ // /__  __ _  ___ 
 / // / _ \/ // / _  / _ \/  ' \/ -_)
 \_,_/ .__/\_, /_//_/\___/_/_/_/\__/ 
-   /_/   /___/                      
+   /_/   /___/
 """
     print(logo)
 
@@ -77,10 +77,10 @@ def log_error(err):
         #if size > 2000:
         #    mode = 'w'
     if MODE_DEBUG['value']:
-            sys.print_exception(err)
+        print(err)
     with open('err.log', mode) as f:
         dt = machine.RTC().datetime()
-        f.write('timestamp = %d/%02d/%02d - %02d:%02d:%02d\n'%(dt[0],dt[1],dt[2],dt[4],dt[5],dt[6]))
+        f.write('timestamp = %d/%02d/%02d - %02d:%02d:%02d\n'%(dt[0], dt[1], dt[2], dt[4], dt[5], dt[6]))
         f.write('%s\n'%(err))
 
 def _debug(msg):

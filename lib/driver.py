@@ -8,14 +8,13 @@ https://github.com/upyhome/upyhome
 """
 
 from machine import Timer
-from lib.pub import Publisher
-from lib.sub import Subscriber
+from lib.base import Publisher, Suscriber
 
 class DriverIn(Publisher):
-    def __init__(self, topic, proxy, tid, user_cb=None, polling=1000):
-        super().__init__(topic, proxy, user_cb)
-        self.polling = polling
+    def __init__(self, tid, proxy, **kwargs):
+        super().__init__(proxy, **kwargs)
         self.timer = Timer(tid)
+        self.polling = kwargs.get('polling', 1000)
         self.val = None
         
     def timer_cb(self, tim):
@@ -28,10 +27,10 @@ class DriverIn(Publisher):
     def stop(self):
         self.timer.deinit()
 
-class DriverOut(Subscriber):
-    def __init__(self, topic, proxy, tid, user_cb=None, topics=[]):
-        super().__init__(topic, proxy, user_cb)
-        self.timer = Timer(tid)
+class DriverOut(Suscriber):
+
+    def __init__(self, proxy, **kwargs):
+        super().__init__(proxy, **kwargs)
         self.val = None
         
 

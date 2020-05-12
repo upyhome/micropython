@@ -25,7 +25,7 @@ class Net(Publisher):
     """
     Network component
     """
-    def __init__(self, tid, proxy, nets, **kwargs):# nets, repl='repl', user=None, polling=3000):
+    def __init__(self, tid, proxy, nets, **kwargs):
         super().__init__(proxy, **kwargs)
         self.net = None
         self.nets = nets
@@ -84,4 +84,3 @@ class Net(Publisher):
 
     def init_mdns(self):
         pass
-            

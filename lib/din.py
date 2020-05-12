@@ -17,11 +17,11 @@ class DigitalInputPin(Publisher):
     - When it's clicked -> C
     - When it's long pressed -> L
     """
-    def __init__(self, tid, proxy, **kwargs):# topic=None, pin=0, inverted=True, debounce=100, long=1000, user=None, raw_value=False):
+    def __init__(self, tid, proxy, **kwargs):
         super().__init__(proxy, **kwargs)
         pin = kwargs.get('pin', None)
         if not isinstance(pin, int):
-            raise AttributeError('Input pin number (%s) not allowd for topic %s'%(str(pin), topic))
+            raise AttributeError('Input pin number (%s) not allowd for topic %s'%(str(pin), self._topic))
         self._hpin = Pin(pin, Pin.IN, Pin.PULL_UP)
         self._inverted = kwargs.get('inverted', True)
         self._dbc_t = kwargs.get('debounce', 50)
@@ -85,4 +85,3 @@ class DigitalInputPin(Publisher):
     def _push(self, event):
         if event in self._filter:
             super()._push(event)
-    

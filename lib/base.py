@@ -65,7 +65,7 @@ class Base:
         """
         Get the value of the component
         """
-        return None 
+        return None
 
 
     def _message(self):
@@ -208,3 +208,4 @@ class Suscriber(Publisher):
             return _next
         else:
             return True
+    
